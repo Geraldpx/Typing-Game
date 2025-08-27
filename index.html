@@ -6,87 +6,171 @@
     <title>Keyboard Typing</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            background-color: #ffffff;
+            background: linear-gradient(135deg, #ffffff 0%, #000000 100%);
+            min-height: 100vh;
+            color: #fff;
         }
 
         .container {
             text-align: center;
-            margin-top: 250px;
-            padding: 100px;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 10px 50px rgba(255, 0, 0, 0.1);
+            margin-top: 100px;
+            padding: 40px;
+            background-color: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             width: 80%;
-            max-width: 1000px;
+            max-width: 600px;
+            animation: fadeIn 0.8s ease-in-out;
+        }
+
+        h2 {
+            font-size: 2em;
+            margin-bottom: 20px;
         }
 
         #wordToType {
-            font-size: 28px;
+            font-size: 32px;
             font-weight: bold;
-            margin: 20px;
+            margin: 20px 0;
+            color: #ffdd57;
+        }
+
+        #typingInput, #newWordInput {
+            padding: 12px;
+            font-size: 18px;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 350px;
+            margin: 10px 0;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        #typingInput:focus, #newWordInput:focus {
+            border-color: #00ff9d;
+            box-shadow: 0 0 10px rgba(0,255,157,0.7);
+            background-color: #f9f9f9;
             color: #333;
         }
 
-        #typingInput {
-            padding: 12px;
-            font-size: 20px;
-            border: 2px solid #ccc;
-            border-radius: 5px;
-            width: 100%;
-            max-width: 400px;
-            margin: 20px 0;
-            outline: none;
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #00ff9d;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 5px;
         }
 
-        #typingInput:focus {
-            border-color: #4caf50;
+        button:hover {
+            background: #00cc7a;
         }
 
         .log {
-            margin-top: 20px;
+            margin-top: 15px;
             font-size: 16px;
-            color: #333;
+            color: #fff;
+            text-align: center;
         }
 
         .correct {
-            color: green;
+            color: #00ff9d;
             font-weight: bold;
         }
 
         .incorrect {
-            color: red;
+            color: #ff4b5c;
             font-weight: bold;
         }
 
-        /* Responsive Styles */
+        /* Completed Words List */
+        #completedWords {
+            margin-top: 30px;
+            text-align: left;
+            width: 100%;
+            max-width: 350px;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(8px);
+        }
+
+        #completedWords h3 {
+            margin-top: 0;
+            text-align: center;
+            color: #ffdd57;
+        }
+
+        #completedWords ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        #completedWords li {
+            padding: 8px 10px;
+            margin-bottom: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            color: #00ff9d;
+        }
+
+        #completedWords li::before {
+            content: "✔";
+            margin-right: 10px;
+            color: #00ff9d;
+        }
+
         @media (max-width: 600px) {
             #wordToType {
-                font-size: 22px;
+                font-size: 26px;
             }
 
             #typingInput {
                 font-size: 18px;
             }
         }
+
+        @keyframes fadeIn {
+            from {opacity: 0; transform: translateY(20px);}
+            to {opacity: 1; transform: translateY(0);}
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Keyboard Typing</h2>
+        <h2>⌨ Keyboard Typing Game</h2>
         <div id="wordToType">Hello</div>
         <input type="text" id="typingInput" placeholder="Start typing...">
+        
+        <!-- Add new word section -->
+        <h3 style="margin-top: 20px;">➕ Add New Word</h3>
+        <input type="text" id="newWordInput" placeholder="Enter new word...">
+        <button id="addWordBtn">Add Word</button>
     </div>
+    
     <div id="throttleLog" class="log"></div>
     <div id="debounceLog" class="log"></div>
 
+    <div id="completedWords">
+        <h3>✅ Completed Words</h3>
+        <ul id="wordList"></ul>
+    </div>
+
     <script>
-        // Function to debounce the input event
         function debounce(fn, delay) {
             let timer;
             return function(...args) {
@@ -95,7 +179,6 @@
             };
         }
 
-        // Function to throttle the input event
         function throttle(fn, limit) {
             let lastCall = 0;
             return function(...args) {
@@ -107,14 +190,17 @@
             };
         }
 
-        const words = ["Hello", "World", "JavaScript", "Programming", "Code", "Typing", "Challenge"];
+        let words = ["Hello", "World", "JavaScript", "Programming", "Code", "Typing", "Challenge"];
         let currentWord = words[Math.floor(Math.random() * words.length)];
         const wordToType = document.getElementById('wordToType');
         wordToType.textContent = currentWord;
 
         const input = document.getElementById('typingInput');
+        const newWordInput = document.getElementById('newWordInput');
+        const addWordBtn = document.getElementById('addWordBtn');
         const throttleLog = document.getElementById('throttleLog');
         const debounceLog = document.getElementById('debounceLog');
+        const wordList = document.getElementById('wordList');
 
         const handleThrottle = throttle((e) => {
             throttleLog.innerHTML = `<b>Throttle:</b> Typing... "${e.target.value}"`;
@@ -128,21 +214,40 @@
         function checkInput(inputText) {
             if (inputText === currentWord) {
                 debounceLog.innerHTML += `<br><span class="correct">Correct!</span>`;
-                setTimeout(changeWord, 1000);  // Change word after 1 second
+                addCompletedWord(currentWord);
+                setTimeout(changeWord, 1000);
             } else {
                 debounceLog.innerHTML += `<br><span class="incorrect">Incorrect. Try again!</span>`;
             }
         }
 
-        // Function to change the word
         function changeWord() {
             currentWord = words[Math.floor(Math.random() * words.length)];
             wordToType.textContent = currentWord;
-            input.value = '';  // Reset input field
-            debounceLog.innerHTML = '';  // Clear the previous messages
-            throttleLog.innerHTML = '';  // Clear the throttle log
+            input.value = '';
+            debounceLog.innerHTML = '';
+            throttleLog.innerHTML = '';
         }
 
+        function addCompletedWord(word) {
+            const li = document.createElement("li");
+            li.textContent = word;
+            wordList.appendChild(li);
+        }
+
+        // Add word button click
+        addWordBtn.addEventListener("click", () => {
+            const newWord = newWordInput.value.trim();
+            if (newWord && !words.includes(newWord)) {
+                words.push(newWord);
+                alert(`"${newWord}" added to the word list!`);
+                newWordInput.value = '';
+            } else {
+                alert("Word is empty or already exists!");
+            }
+        });
+
+        // Main typing event
         input.addEventListener('keyup', (e) => {
             handleThrottle(e);
             handleDebounce(e);
@@ -150,3 +255,4 @@
     </script>
 </body>
 </html>
+
